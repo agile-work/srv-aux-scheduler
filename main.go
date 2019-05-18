@@ -37,14 +37,19 @@ func main() {
 	}
 	fmt.Println("Database connected")
 
+	jobsQueue, err := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
+	if err != nil {
+		fmt.Println("Error connecting to queue")
+		return
+	}
+	fmt.Println("Queue connected")
+
 	service, err := shared.RegisterService(*serviceInstanceName, shared.ServiceTypeAuxiliary)
 	if err != nil {
 		fmt.Println("Error registering service in the database")
 		return
 	}
 	fmt.Printf("Service %s registered\n", service.ID)
-
-	jobsQueue, _ := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
 
 	scheduler := controllers.Scheduler{}
 
