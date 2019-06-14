@@ -30,7 +30,7 @@ func (s *Scheduler) CheckJobsToExecute(jobsQueue *amqp.Queue) {
 	jobInstanceTable := shared.TableCoreJobInstances
 	condition := builder.Equal("status", shared.JobStatusCreated)
 
-	err := db.LoadStruct(jobInstanceTable, &jobInstances, condition)
+	err := db.SelectStruct(jobInstanceTable, &jobInstances, condition)
 	if err != nil {
 		// TODO: Pensar em como tratar esse erro
 		fmt.Println(err.Error())
