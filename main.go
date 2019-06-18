@@ -11,12 +11,13 @@ import (
 
 	shared "github.com/agile-work/srv-shared"
 	"github.com/agile-work/srv-shared/amqp"
+	"github.com/agile-work/srv-shared/service"
 	"github.com/agile-work/srv-shared/sql-builder/db"
 )
 
 var (
 	serviceInstanceName = flag.String("name", "Scheduler", "Name of this instance")
-	heartbeatInterval   = flag.Int("heartbeat", 10, "Number of seconds to send a heartbeat")
+	execInterval        = flag.Int("execInterval", 10, "Interval (seconds) between scheduler executions")
 	host                = "cryo.cdnm8viilrat.us-east-2.rds-preview.amazonaws.com"
 	port                = 5432
 	user                = "cryoadmin"
@@ -44,28 +45,24 @@ func main() {
 	}
 	fmt.Println("Queue connected")
 
-	service, err := shared.RegisterService(*serviceInstanceName, shared.ServiceTypeAuxiliary)
+	srv, err := service.Register(*serviceInstanceName, shared.ServiceTypeAuxiliary)
 	if err != nil {
 		fmt.Println("Error registering service in the database")
 		return
 	}
-	fmt.Printf("Service %s registered\n", service.ID)
+	fmt.Printf("Service %s registered\n", srv.ID)
 
 	scheduler := controllers.Scheduler{}
 
-	ticker := time.NewTicker(time.Duration(*heartbeatInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(*execInterval) * time.Second)
 	go func() {
 		for t := range ticker.C {
-			service.Heartbeat(t)
-			scheduler.WG.Add(2)
-			go scheduler.CheckJobsToExecute(jobsQueue)
-			go scheduler.CheckServicesStatus()
-			scheduler.WG.Wait()
+			scheduler.CheckJobsToExecute(jobsQueue)
 		}
 	}()
 
 	<-stopChan
 	fmt.Println("Shutting down Service...")
-	service.Down()
+	srv.Down()
 	fmt.Println("Service stopped!")
 }

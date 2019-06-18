@@ -62,24 +62,3 @@ func (s *Scheduler) CheckJobsToExecute(jobsQueue *amqp.Queue) {
 
 	s.WG.Done()
 }
-
-// CheckServicesStatus verify and update services active status
-func (s *Scheduler) CheckServicesStatus() {
-	// statemant := builder.Update(
-	// 	shared.TableCoreServices,
-	// 	"active",
-	// ).Values(
-	// 	false,
-	// ).Where(
-	// 	builder.And(
-	// 		builder.Equal("status", shared.JobStatusCreated),
-	// 		builder.Equal("queue_at", nil),
-	// 	),
-	// )
-	// err := db.Exec(statemant)
-	// if err != nil {
-	// 	// TODO: Pensar em como tratar esse erro
-	// 	fmt.Println(err.Error())
-	// }
-	s.WG.Done()
-}
