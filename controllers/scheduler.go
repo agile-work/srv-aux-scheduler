@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	shared "github.com/agile-work/srv-shared"
 	"github.com/agile-work/srv-shared/amqp"
+	"github.com/agile-work/srv-shared/constants"
 	"github.com/agile-work/srv-shared/sql-builder/builder"
 	"github.com/agile-work/srv-shared/sql-builder/db"
 )
@@ -27,10 +27,11 @@ type JobInstance struct {
 func (s *Scheduler) CheckJobsToExecute(jobsQueue *amqp.Queue) {
 	// TODO: Pensar em um jeito de impedir threads diferentes pegarem a mesma instância de job
 	jobInstances := []JobInstance{}
-	jobInstanceTable := shared.TableCoreJobInstances
-	condition := builder.Equal("status", shared.JobStatusCreated)
+	jobInstanceTable := constants.TableCoreJobInstances
 
-	err := db.SelectStruct(jobInstanceTable, &jobInstances, condition)
+	err := db.SelectStruct(jobInstanceTable, &jobInstances, &db.Options{
+		Conditions: builder.Equal("status", constants.JobStatusCreated),
+	})
 	if err != nil {
 		// TODO: Pensar em como tratar esse erro
 		fmt.Println(err.Error())
@@ -38,8 +39,7 @@ func (s *Scheduler) CheckJobsToExecute(jobsQueue *amqp.Queue) {
 
 	for _, jobInstance := range jobInstances {
 		jobInstanceIDColumn := fmt.Sprintf("%s.id", jobInstanceTable)
-		condition := builder.Equal(jobInstanceIDColumn, jobInstance.ID)
-		jobInstance.Status = shared.JobStatusInQueue
+		jobInstance.Status = constants.JobStatusInQueue
 		jobInstance.UpdatedAt = time.Now()
 
 		err := jobsQueue.Push(amqp.Message{
@@ -47,13 +47,15 @@ func (s *Scheduler) CheckJobsToExecute(jobsQueue *amqp.Queue) {
 			Queue: "jobs",
 		})
 		if err != nil {
-			jobInstance.Status = shared.JobStatusCreated
+			jobInstance.Status = constants.JobStatusCreated
 			fmt.Printf("JOB Instance ID: %s | Error trying to send to queue: %s\n", jobInstance.ID, err.Error())
 		} else {
 			fmt.Printf("JOB Instance ID: %s | Sent to queue successfully\n", jobInstance.ID)
 		}
 
-		err = db.UpdateStruct(jobInstanceTable, &jobInstance, condition, "status", "updated_at")
+		err = db.UpdateStruct(jobInstanceTable, &jobInstance, &db.Options{
+			Conditions: builder.Equal(jobInstanceIDColumn, jobInstance.ID),
+		}, "status", "updated_at")
 		if err != nil {
 			// TODO: Pensar em como tratar esse erro
 			fmt.Println(err.Error())

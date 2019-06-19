@@ -9,8 +9,8 @@ import (
 
 	"github.com/agile-work/srv-aux-scheduler/controllers"
 
-	shared "github.com/agile-work/srv-shared"
 	"github.com/agile-work/srv-shared/amqp"
+	"github.com/agile-work/srv-shared/constants"
 	"github.com/agile-work/srv-shared/service"
 	"github.com/agile-work/srv-shared/sql-builder/db"
 )
@@ -45,7 +45,7 @@ func main() {
 	}
 	fmt.Println("Queue connected")
 
-	srv, err := service.Register(*serviceInstanceName, shared.ServiceTypeAuxiliary)
+	srv, err := service.Register(*serviceInstanceName, constants.ServiceTypeAuxiliary)
 	if err != nil {
 		fmt.Println("Error registering service in the database")
 		return
