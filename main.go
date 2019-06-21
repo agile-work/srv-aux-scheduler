@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
+	"github.com/agile-work/srv-aux-scheduler/controllers"
+	"github.com/agile-work/srv-shared/amqp"
 	"github.com/agile-work/srv-shared/constants"
 	"github.com/agile-work/srv-shared/service"
 	"github.com/agile-work/srv-shared/sql-builder/db"
@@ -26,7 +29,7 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt)
 
 	flag.Parse()
-	fmt.Println("Starting Service...")
+	fmt.Printf("Starting Service %s...\n", *serviceInstanceName)
 	err := db.Connect(host, port, user, password, dbName, false)
 	if err != nil {
 		fmt.Println("Error connecting to database")
@@ -34,8 +37,7 @@ func main() {
 	}
 	fmt.Println("Database connected")
 
-	// TODO: fix
-	// jobsQueue, err := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
+	jobsQueue, err := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
 	if err != nil {
 		fmt.Println("Error connecting to queue")
 		return
@@ -44,26 +46,24 @@ func main() {
 
 	srv, err := service.Register(*serviceInstanceName, constants.ServiceTypeAuxiliary)
 	if err != nil {
-		fmt.Println("Error registering service in the database")
-		return
+		fmt.Println("Error connecting to Realtime WS")
+		fmt.Println(err.Error())
 	}
-	// TODO: fix
-	// fmt.Printf("Service %s registered\n", srv.ID)
+	fmt.Println("Realtime WS connected")
 
-	// TODO: fix
-	// scheduler := controllers.Scheduler{}
+	scheduler := controllers.Scheduler{}
 
-	// TODO: fix
-	// ticker := time.NewTicker(time.Duration(*execInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(*execInterval) * time.Second)
 	go func() {
-		// TODO: fix
-		// for t := range ticker.C {
-		// 	scheduler.CheckJobsToExecute(jobsQueue)
-		// }
+		for t := range ticker.C {
+			scheduler.WG.Add(1)
+			scheduler.CheckJobsToExecute(t, jobsQueue)
+			scheduler.WG.Wait()
+		}
 	}()
 
 	<-stopChan
-	fmt.Println("Shutting down Service...")
+	fmt.Println("\nShutting down Service...")
 	srv.Down()
 	fmt.Println("Service stopped!")
 }

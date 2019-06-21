@@ -24,7 +24,7 @@ type JobInstance struct {
 }
 
 // CheckJobsToExecute verify in the database instances to be executed and create a new message in the queue
-func (s *Scheduler) CheckJobsToExecute(jobsQueue *amqp.Queue) {
+func (s *Scheduler) CheckJobsToExecute(now time.Time, jobsQueue *amqp.Queue) {
 	// TODO: Pensar em um jeito de impedir threads diferentes pegarem a mesma instância de job
 	jobInstances := []JobInstance{}
 	jobInstanceTable := constants.TableCoreJobInstances
