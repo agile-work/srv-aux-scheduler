@@ -5,11 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
-	"github.com/agile-work/srv-aux-scheduler/controllers"
-
-	"github.com/agile-work/srv-shared/amqp"
 	"github.com/agile-work/srv-shared/constants"
 	"github.com/agile-work/srv-shared/service"
 	"github.com/agile-work/srv-shared/sql-builder/db"
@@ -38,7 +34,8 @@ func main() {
 	}
 	fmt.Println("Database connected")
 
-	jobsQueue, err := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
+	// TODO: fix
+	// jobsQueue, err := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
 	if err != nil {
 		fmt.Println("Error connecting to queue")
 		return
@@ -50,15 +47,19 @@ func main() {
 		fmt.Println("Error registering service in the database")
 		return
 	}
-	fmt.Printf("Service %s registered\n", srv.ID)
+	// TODO: fix
+	// fmt.Printf("Service %s registered\n", srv.ID)
 
-	scheduler := controllers.Scheduler{}
+	// TODO: fix
+	// scheduler := controllers.Scheduler{}
 
-	ticker := time.NewTicker(time.Duration(*execInterval) * time.Second)
+	// TODO: fix
+	// ticker := time.NewTicker(time.Duration(*execInterval) * time.Second)
 	go func() {
-		for t := range ticker.C {
-			scheduler.CheckJobsToExecute(jobsQueue)
-		}
+		// TODO: fix
+		// for t := range ticker.C {
+		// 	scheduler.CheckJobsToExecute(jobsQueue)
+		// }
 	}()
 
 	<-stopChan
