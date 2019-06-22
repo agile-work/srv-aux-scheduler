@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/agile-work/srv-aux-scheduler/controllers"
-	"github.com/agile-work/srv-shared/amqp"
 	"github.com/agile-work/srv-shared/constants"
-	"github.com/agile-work/srv-shared/service"
+	"github.com/agile-work/srv-shared/rdb"
+	"github.com/agile-work/srv-shared/socket"
 	"github.com/agile-work/srv-shared/sql-builder/db"
 )
 
@@ -22,6 +22,11 @@ var (
 	user                = "cryoadmin"
 	password            = "x3FhcrWDxnxCq9p"
 	dbName              = "cryo"
+	redisHost           = flag.String("redisHost", "localhost", "Redis host")
+	redisPort           = flag.Int("redisPort", 6379, "Redis port")
+	redisPass           = flag.String("redisPass", "redis123", "Redis password")
+	wsHost              = flag.String("wsHost", "localhost", "Realtime host")
+	wsPort              = flag.Int("wsPort", 8010, "Realtime port")
 )
 
 func main() {
@@ -37,19 +42,13 @@ func main() {
 	}
 	fmt.Println("Database connected")
 
-	jobsQueue, err := amqp.New("amqp://guest:guest@localhost:5672/", "jobs", false)
-	if err != nil {
-		fmt.Println("Error connecting to queue")
-		return
-	}
-	fmt.Println("Queue connected")
+	rdb.Init(*redisHost, *redisPort, *redisPass)
+	go rdb.HandleReconnection(5)
+	defer rdb.Close()
 
-	srv, err := service.Register(*serviceInstanceName, constants.ServiceTypeAuxiliary)
-	if err != nil {
-		fmt.Println("Error connecting to Realtime WS")
-		fmt.Println(err.Error())
-	}
-	fmt.Println("Realtime WS connected")
+	socket.Init(*serviceInstanceName, constants.ServiceTypeAuxiliary, *wsHost, *wsPort)
+	go socket.HandleReconnection(5)
+	defer socket.Close()
 
 	scheduler := controllers.Scheduler{}
 
@@ -57,13 +56,12 @@ func main() {
 	go func() {
 		for t := range ticker.C {
 			scheduler.WG.Add(1)
-			scheduler.CheckJobsToExecute(t, jobsQueue)
+			scheduler.CheckJobsToExecute(t)
 			scheduler.WG.Wait()
 		}
 	}()
 
 	<-stopChan
 	fmt.Println("\nShutting down Service...")
-	srv.Down()
 	fmt.Println("Service stopped!")
 }
