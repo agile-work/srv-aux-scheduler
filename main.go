@@ -10,6 +10,7 @@ import (
 	"github.com/agile-work/srv-aux-scheduler/controllers"
 	"github.com/agile-work/srv-shared/constants"
 	"github.com/agile-work/srv-shared/rdb"
+	"github.com/agile-work/srv-shared/service"
 	"github.com/agile-work/srv-shared/socket"
 	"github.com/agile-work/srv-shared/sql-builder/db"
 )
@@ -34,7 +35,13 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt)
 
 	flag.Parse()
-	fmt.Printf("Starting Service %s...\n", *serviceInstanceName)
+
+	pid := os.Getpid()
+	hostname, _ := os.Hostname()
+	aux := service.New("Scheduler", constants.ServiceTypeAuxiliary, hostname, 0, pid)
+
+	fmt.Printf("Starting Service %s...\n", aux.Name)
+	fmt.Printf("[Instance: %s | PID: %d]\n", aux.InstanceCode, aux.PID)
 
 	fmt.Println("Database connecting...")
 	err := db.Connect(host, port, user, password, dbName, false)
@@ -47,7 +54,7 @@ func main() {
 	rdb.Init(*redisHost, *redisPort, *redisPass)
 	defer rdb.Close()
 
-	socket.Init(*serviceInstanceName, constants.ServiceTypeAuxiliary, *wsHost, *wsPort)
+	socket.Init(aux, *wsHost, *wsPort)
 	defer socket.Close()
 
 	scheduler := controllers.Scheduler{}
@@ -61,7 +68,7 @@ func main() {
 		}
 	}()
 
-	fmt.Printf("Scheduler pid:%d ready...\n", os.Getpid())
+	fmt.Println("Scheduler ready...")
 
 	<-stopChan
 	fmt.Println("\nShutting down Service...")
