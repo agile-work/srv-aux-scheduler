@@ -35,6 +35,8 @@ func main() {
 
 	flag.Parse()
 	fmt.Printf("Starting Service %s...\n", *serviceInstanceName)
+
+	fmt.Println("Database connecting...")
 	err := db.Connect(host, port, user, password, dbName, false)
 	if err != nil {
 		fmt.Println("Error connecting to database")
@@ -43,11 +45,9 @@ func main() {
 	fmt.Println("Database connected")
 
 	rdb.Init(*redisHost, *redisPort, *redisPass)
-	go rdb.HandleReconnection(5)
 	defer rdb.Close()
 
 	socket.Init(*serviceInstanceName, constants.ServiceTypeAuxiliary, *wsHost, *wsPort)
-	go socket.HandleReconnection(5)
 	defer socket.Close()
 
 	scheduler := controllers.Scheduler{}
@@ -60,6 +60,8 @@ func main() {
 			scheduler.WG.Wait()
 		}
 	}()
+
+	fmt.Printf("Scheduler pid:%d ready...\n", os.Getpid())
 
 	<-stopChan
 	fmt.Println("\nShutting down Service...")
